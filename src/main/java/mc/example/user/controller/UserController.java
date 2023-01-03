@@ -37,7 +37,7 @@ public class UserController {
      * 유저 전체 정보
      * @return List<User>
      */
-    @GetMapping(path="/users")
+    @GetMapping("/users")
     public List<User> retrieveAllUsers() {
         return userService.findAll();
     }
@@ -47,7 +47,7 @@ public class UserController {
      * @param id 유저 아이디
      * @return User
      */
-    @GetMapping(path="/users/{id}")
+    @GetMapping("/users/{id}")
     public User retrieveUser(@PathVariable int id) {
         User user = userService.findOne(id);
 
@@ -63,7 +63,7 @@ public class UserController {
      * @param user 유저
      * @return User
      */
-    @PutMapping(path="/users")
+    @PutMapping("/users")
     public ResponseEntity<User> createUser(@Valid @RequestBody User user) {
         User savedUser = userService.save(user);
 
@@ -77,9 +77,9 @@ public class UserController {
 
     /**
      * 유저 삭제
-     * @return id 유저 아이디
+     * @param id 유저 아이디
      */
-    @DeleteMapping(path="/users/{id}")
+    @DeleteMapping("/users/{id}")
     public void deleteUser(@PathVariable int id) {
         User user = userService.deleteById(id);
 
@@ -91,9 +91,9 @@ public class UserController {
     /**
      * 유저 수정
      * @param user 유저
-     * @return
+     * @return User 유저
      */
-    @PatchMapping(path="/users")
+    @PatchMapping("/users")
     public User patchUser(@RequestBody User user){
         User u = userService.patchUser(user);
 
