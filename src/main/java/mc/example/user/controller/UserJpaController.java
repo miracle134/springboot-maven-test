@@ -4,9 +4,12 @@
  */
 package mc.example.user.controller;
 
-import mc.example.user.entity.User;
-import mc.example.user.service.UserService;
 import mc.example.exception.UserNotFoundException;
+import mc.example.user.entity.Post;
+import mc.example.user.entity.User;
+import mc.example.user.repository.PostRepository;
+import mc.example.user.repository.UserRepository;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.hateoas.EntityModel;
 import org.springframework.hateoas.server.mvc.WebMvcLinkBuilder;
 import org.springframework.http.ResponseEntity;
@@ -17,51 +20,54 @@ import javax.annotation.Resource;
 import javax.validation.Valid;
 import java.net.URI;
 import java.util.List;
+import java.util.Optional;
 
 import static org.springframework.hateoas.server.mvc.WebMvcLinkBuilder.linkTo;
 import static org.springframework.hateoas.server.mvc.WebMvcLinkBuilder.methodOn;
 
 /**
  * packageName    : mc.example.user.controller
- * fileName       : UserController
+ * fileName       : UserJpaController
  * author         : MiracleCat
- * date           : 2022-12-31(031)
+ * date           : 2023-01-05(005)
  * description    :
  * ===========================================================
  * DATE              AUTHOR             NOTE
  * -----------------------------------------------------------
- * 2022-12-31(031)        MiracleCat       최초 생성
+ * 2023-01-05(005)        MiracleCat       최초 생성
  */
 @RestController
-public class UserController {
+@RequestMapping("/jpa")
+public class UserJpaController {
 
-    @Resource(name="userService")
-    private UserService userService;
+    @Autowired
+    UserRepository userRepository;
+
+    @Autowired
+    PostRepository postRepository;
 
     /**
-     * 유저 전체 정보
+     * 전체 유저 리스트
      * @return List<User>
      */
     @GetMapping("/users")
     public List<User> retrieveAllUsers() {
-        return userService.findAll();
+        return userRepository.findAll();
     }
 
     /**
-     * 유저 개인 정보
-     * @param id 유저 아이디
+     * 개인 유저 정보
+     * @param id
      * @return User
      */
     @GetMapping("/users/{id}")
     public EntityModel<User> retrieveUser(@PathVariable int id) {
-        User user = userService.findOne(id);
+        Optional<User> user = userRepository.findById(id);
 
-        if (user == null){
+        if (!user.isPresent())
             throw new UserNotFoundException(String.format("ID[%s] not found", id));
-        }
 
-        // Hateos
-        EntityModel<User> entityModel = EntityModel.of(user);
+        EntityModel<User> entityModel = EntityModel.of(user.get());
         WebMvcLinkBuilder linkTo = linkTo(methodOn(this.getClass()).retrieveAllUsers());
 
         entityModel.add(linkTo.withRel("all-users"));
@@ -76,7 +82,7 @@ public class UserController {
      */
     @PutMapping("/users")
     public ResponseEntity<User> createUser(@Valid @RequestBody User user) {
-        User savedUser = userService.save(user);
+        User savedUser = userRepository.save(user);
 
         URI location = ServletUriComponentsBuilder.fromCurrentRequest()
                 .path("/{id}")
@@ -92,27 +98,45 @@ public class UserController {
      */
     @DeleteMapping("/users/{id}")
     public void deleteUser(@PathVariable int id) {
-        User user = userService.deleteById(id);
-
-        if(user == null){
-            throw new UserNotFoundException(String.format("ID[%s] not found", id));
-        }
+        userRepository.deleteById(id);
     }
 
     /**
-     * 유저 수정
-     * @param user 유저
-     * @return User 유저
+     * 유저 포스트 리스트
+     * @param id 유저 아이디
+     * @return List<Post>
      */
-    @PatchMapping("/users")
-    public User patchUser(@RequestBody User user){
-        User u = userService.patchUser(user);
+    @GetMapping("/users/{id}/posts")
+    public List<Post> retrieveAllPostsByUser(@PathVariable int id){
+        Optional<User> user = userRepository.findById(id);
 
-        if(u == null){
-            throw new UserNotFoundException(String.format("USER[%s] not found", user));
-        }
+        if (!user.isPresent())
+            throw new UserNotFoundException(String.format("ID[%s] not found", id));
 
-        return u;
+        return user.get().getPosts();
+    }
+
+    /**
+     * 유저 포스트 등록
+     * @param post 유저 포스트
+     * @return Post
+     */
+    @PutMapping("/users/{id}/posts")
+    public ResponseEntity<Post> createPost(@PathVariable int id, @RequestBody Post post) {
+        Optional<User> user = userRepository.findById(id);
+
+        if (!user.isPresent())
+            throw new UserNotFoundException(String.format("ID[%s] not found", id));
+
+        post.setUser(user.get());
+        Post savedPost = postRepository.save(post);
+
+        URI location = ServletUriComponentsBuilder.fromCurrentRequest()
+                .path("/{id}")
+                .buildAndExpand(savedPost.getId())
+                .toUri();
+
+        return ResponseEntity.created(location).build();
     }
 
 }
